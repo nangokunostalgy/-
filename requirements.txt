@@ -1,0 +1,4 @@
+streamlit>=1.40,<2
+pandas>=2.0,<3
+feedparser>=6.0,<7
+yfinance>=0.2.50,<1
