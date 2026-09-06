@@ -1,0 +1,27 @@
+
+import os
+from urllib.parse import urlencode
+from urllib.request import Request, urlopen
+
+def telegram_send(text):
+    token = os.environ["TELEGRAM_BOT_TOKEN"]
+    chat_id = os.environ["TELEGRAM_CHAT_ID"]
+    url = f"https://api.telegram.org/bot{token}/sendMessage"
+    payload = urlencode({
+        "chat_id": chat_id,
+        "text": text,
+        "disable_web_page_preview": "true",
+    }).encode("utf-8")
+
+    req = Request(url, data=payload, method="POST")
+    with urlopen(req, timeout=20) as response:
+        body = response.read().decode("utf-8")
+        if response.status != 200:
+            raise RuntimeError(body)
+
+if __name__ == "__main__":
+    telegram_send(
+        "✅ 通知テスト成功\n\n"
+        "GitHub Actions → Telegram → スマホ通知まで正常に接続されています。"
+    )
+    print("Telegram test notification sent.")
