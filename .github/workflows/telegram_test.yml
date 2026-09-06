@@ -1,28 +1,24 @@
+name: Telegram Notification Test
 
-import os
-from urllib.parse import urlencode
-from urllib.request import Request, urlopen
+on:
+  workflow_dispatch:
 
-def telegram_send(text):
-    token = os.environ["TELEGRAM_BOT_TOKEN"]
-    chat_id = os.environ["TELEGRAM_CHAT_ID"]
-    url = f"https://api.telegram.org/bot{token}/sendMessage"
-    payload = urlencode({
-        "chat_id": chat_id,
-        "text": text,
-        "disable_web_page_preview": "true",
-    }).encode("utf-8")
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
 
-    req = Request(url, data=payload, method="POST")
-    with urlopen(req, timeout=20) as response:
-        body = response.read().decode("utf-8")
-        if response.status != 200:
-            raise RuntimeError(body)
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-if __name__ == "__main__":
-    telegram_send(
-        "✅ 通知テスト成功\n\n"
-        "GitHub Actions → Telegram → スマホ通知まで正常に接続されています。"
-    )
-    print("Telegram test notification sent.")
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
 
+      - name: Send Telegram test
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: python telegram_test.py
