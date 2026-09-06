@@ -1,28 +1,44 @@
-強い材料のスマホ自動通知 — 追加手順
-この追加版は、既存のStreamlitアプリとは別にGitHub Actionsがニュースを監視します。 アプリを閉じていても、スマホがスリープ中でもTelegramアプリ側の通知設定が有効なら通知を受け取れます。
-追加するファイル
-notify.py → GitHubリポジトリの一番上（app.pyと同じ場所）
-.github/workflows/news_alert.yml → このフォルダ構成のまま追加
-Telegram側の準備
-Telegramアプリをインストール
-Telegramで @BotFather を検索
-/newbot を送信
-Bot名とユーザー名を設定
-発行されたBot Tokenを控える
-作ったBotを開いて Start を押す
-Chat ID
-Botに何か1通メッセージを送った後、以下をブラウザで開きます。 https://api.telegram.org/bot<あなたのBOT_TOKEN>/getUpdates
-表示されたJSONの "chat":{"id":123456789...} の数字がChat IDです。
-GitHub Secrets
-GitHubリポジトリ → Settings → Secrets and variables → Actions → New repository secret
-次の2つを登録します。
-Name: TELEGRAM_BOT_TOKEN Secret: BotFatherから発行されたToken
-Name: TELEGRAM_CHAT_ID Secret: 上で確認したChat ID
-※ TokenやChat IDをapp.pyや公開リポジトリへ直接書かないでください。
-テスト
-GitHub → Actions → Strong Material Alert → Run workflow
-条件に該当する直近ニュースがあればTelegramへ届きます。
-通知条件
-初期値は重要度★4以上です。 .github/workflows/news_alert.yml の NOTIFY_MIN_SCORE: "4" を "5" に変更すると★★★★★だけになります。
-監視頻度
-約5分おきです。 GitHub Actionsのスケジュール実行は混雑時などに遅延することがあります。
+name: Strong Material Alert
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependency
+        run: pip install feedparser
+
+      - name: Scan and notify
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          NOTIFY_MIN_SCORE: "4"
+          LOOKBACK_MINUTES: "20"
+        run: python notify.py
+
+      - name: Save notification history
+        run: |
+          if [ -n "$(git status --porcelain -- .notification_state.json)" ]; then
+            git config user.name "news-alert-bot"
+            git config user.email "actions@users.noreply.github.com"
+            git add .notification_state.json
+            git commit -m "Update notification history"
+            git push
+          fi
